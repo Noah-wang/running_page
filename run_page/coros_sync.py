@@ -121,11 +121,13 @@ class Coros:
             fname = os.path.basename(file_url)
             file_path = os.path.join(download_folder, fname)
 
-            async with self.req.stream("GET", file_url) as response:
-                response.raise_for_status()
-                async with aiofiles.open(file_path, "wb") as f:
-                    async for chunk in response.aiter_bytes():
-                        await f.write(chunk)
+            async with httpx.AsyncClient(timeout=TIME_OUT) as download_client:
+                async with download_client.stream("GET", file_url) as response:
+                    response.raise_for_status()
+                    async with aiofiles.open(file_path, "wb") as f:
+                        async for chunk in response.aiter_bytes():
+                            await f.write(chunk)
+            print(f"Downloaded {file_type}: {fname}", flush=True)
             return label_id, fname
         except httpx.HTTPStatusError as exc:
             print(
