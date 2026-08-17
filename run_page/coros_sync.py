@@ -10,10 +10,12 @@ import httpx
 from config import JSON_FILE, SQL_FILE, FOLDER_DICT
 from utils import make_activities_file
 
+COROS_API_BASE = os.getenv("COROS_API_BASE", "https://teamcnapi.coros.com").rstrip("/")
+
 COROS_URL_DICT = {
-    "LOGIN_URL": "https://teamcnapi.coros.com/account/login",
-    "DOWNLOAD_URL": "https://teamcnapi.coros.com/activity/detail/download",
-    "ACTIVITY_LIST": "https://teamcnapi.coros.com/activity/query",
+    "LOGIN_URL": f"{COROS_API_BASE}/account/login",
+    "DOWNLOAD_URL": f"{COROS_API_BASE}/activity/detail/download",
+    "ACTIVITY_LIST": f"{COROS_API_BASE}/activity/query",
 }
 
 COROS_TYPE_DICT = {
