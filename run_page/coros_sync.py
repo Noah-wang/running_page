@@ -73,9 +73,10 @@ class Coros:
     async def init(self):
         await self.login()
 
-    async def fetch_activity_ids_types(self, only_run):
+    async def fetch_activity_ids_types(self, only_run, limit=None):
         page_number = 1
         all_activities_ids_types = []
+        seen_label_ids = set()
 
         mode_list_str = "100,101,102,103" if only_run else ""
         while True:
@@ -85,12 +86,30 @@ class Coros:
             activities = data.get("data", {}).get("dataList", None)
             if not activities:
                 break
+            page_new_count = 0
             for activity in activities:
                 label_id = activity["labelId"]
                 sport_type = activity["sportType"]
                 if label_id is None:
                     continue
+                if label_id in seen_label_ids:
+                    continue
+                seen_label_ids.add(label_id)
+                page_new_count += 1
                 all_activities_ids_types.append([label_id, sport_type])
+                if limit and len(all_activities_ids_types) >= limit:
+                    print(
+                        f"Fetched page {page_number}: {page_new_count} new activities, reached limit {limit}",
+                        flush=True,
+                    )
+                    return all_activities_ids_types
+
+            print(
+                f"Fetched page {page_number}: {page_new_count} new activities",
+                flush=True,
+            )
+            if page_new_count == 0:
+                break
 
             page_number += 1
 
@@ -146,19 +165,22 @@ def get_downloaded_ids(folder):
     return [i.split(".")[0] for i in os.listdir(folder) if not i.startswith(".")]
 
 
-async def download_and_generate(account, password, only_run, file_type):
+async def download_and_generate(account, password, only_run, file_type, limit=None):
     folder = FOLDER_DICT[file_type]
     downloaded_ids = get_downloaded_ids(folder)
     coros = Coros(account, password)
     await coros.init()
-    activity_infos = await coros.fetch_activity_ids_types(only_run=only_run)
+    activity_infos = await coros.fetch_activity_ids_types(only_run=only_run, limit=limit)
     activity_ids = [i[0] for i in activity_infos]
     activity_types = [i[1] for i in activity_infos]
     activity_id_type_dict = dict(zip(activity_ids, activity_types))
-    print("activity_ids: ", len(activity_ids))
-    print("downloaded_ids: ", len(downloaded_ids))
-    to_generate_coros_ids = list(set(activity_ids) - set(downloaded_ids))
-    print("to_generate_activity_ids: ", len(to_generate_coros_ids))
+    print("activity_ids: ", len(activity_ids), flush=True)
+    print("downloaded_ids: ", len(downloaded_ids), flush=True)
+    downloaded_id_set = set(downloaded_ids)
+    to_generate_coros_ids = [
+        activity_id for activity_id in activity_ids if activity_id not in downloaded_id_set
+    ]
+    print("to_generate_activity_ids: ", len(to_generate_coros_ids), flush=True)
 
     start_time = time.time()
     await gather_with_concurrency(
@@ -170,7 +192,7 @@ async def download_and_generate(account, password, only_run, file_type):
             for label_id in to_generate_coros_ids
         ],
     )
-    print(f"Download finished. Elapsed {time.time()-start_time} seconds")
+    print(f"Download finished. Elapsed {time.time()-start_time} seconds", flush=True)
     await coros.req.aclose()
     make_activities_file(SQL_FILE, folder, JSON_FILE, file_type)
 
@@ -214,6 +236,13 @@ if __name__ == "__main__":
         default="fit",
         help="to download personal documents or ebook",
     )
+    parser.add_argument(
+        "--limit",
+        dest="limit",
+        type=int,
+        default=None,
+        help="limit the number of recent activities to sync",
+    )
     options = parser.parse_args()
 
     account = options.account
@@ -224,5 +253,7 @@ if __name__ == "__main__":
     encrypted_pwd = hashlib.md5(password.encode()).hexdigest()
 
     asyncio.run(
-        download_and_generate(account, encrypted_pwd, is_only_running, file_type)
+        download_and_generate(
+            account, encrypted_pwd, is_only_running, file_type, options.limit
+        )
     )
