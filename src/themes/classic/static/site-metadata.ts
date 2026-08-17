@@ -17,7 +17,7 @@ const getBasePath = () => {
 const data: ISiteMetadataResult = {
   siteTitle: 'Noah Wang Running',
   siteUrl: 'https://www.strava.com/athletes/126815351',
-  logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTtc69JxHNcmN1ETpMUX4dozAgAN6iPjWalQ&usqp=CAU',
+  logo: `${getBasePath()}/images/avatar.jpg`,
   description: 'Noah Wang running page',
   navLinks: [
     {
