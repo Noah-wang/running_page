@@ -45,7 +45,7 @@ env:
   GENERATE_MONTH_OF_LIFE: true # If you want to generate the month of life, set it to `true`
   BIRTHDAY_MONTH: 2003-01 # If you want to generate the month of life, set it to your birthday month, format is YYYY-MM
   COROS_API_BASE: https://teamapi.coros.com
-  COROS_SYNC_LIMIT: 100
+  COROS_SYNC_LIMIT: 1000
 
 jobs:
   sync:
